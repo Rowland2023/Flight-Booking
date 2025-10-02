@@ -1,0 +1,27 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment files
+.env
+
+# Logs
+*.log
+logs/
+
+# Virtual environments
+venv/
+env/
+
+# Git
+.git/
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node (if you have frontend here)
+node_modules/
+npm-debug.log
