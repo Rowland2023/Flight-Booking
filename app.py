@@ -14,6 +14,11 @@ from routes import weather, booking, airport, tips, status, flight
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+@app.route('/')
+def home():
+    return '✅ Flight Booking API is running. '
+
+
 # Logging setup
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
