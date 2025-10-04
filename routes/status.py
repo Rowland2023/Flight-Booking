@@ -1,15 +1,14 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from amadeus import Client, ResponseError
 import logging
-import os
 
 bp = Blueprint('status', __name__)
 
-# Initialize Amadeus client securely
-amadeus = Client(
-    client_id=os.getenv('AMADEUS_KEY'),
-    client_secret=os.getenv('AMADEUS_SECRET')
-)
+def init_amadeus_client():
+    return Client(
+        client_id=current_app.config['AMADEUS_CLIENT_ID'],
+        client_secret=current_app.config['AMADEUS_CLIENT_SECRET']
+    )
 
 @bp.route('/status', methods=['GET'])
 def get_flight_status():
@@ -25,17 +24,18 @@ def get_flight_status():
     date = request.args.get('date', '2025-10-05')  # Default or passed date
 
     try:
+        amadeus = init_amadeus_client()
         response = amadeus.schedule.flights.get(
             carrierCode=carrier,
             flightNumber=number,
             scheduledDepartureDate=date
         )
-        logging.info(f"Live flight status for {flight} on {date}: {response.data}")
+        logging.info(f"✅ Live flight status for {flight} on {date}: {response.data}")
         return jsonify({
             "flight": flight,
             "date": date,
             "status": response.data
         })
     except ResponseError as error:
-        logging.error(f"Amadeus API error for {flight} on {date}: {error}")
+        logging.error(f"❌ Amadeus API error for {flight} on {date}: {error}")
         return jsonify({"error": "Unable to retrieve live flight status"}), 502
