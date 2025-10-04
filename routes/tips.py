@@ -40,7 +40,15 @@ def get_tips():
     city_info = get_city_info(city)
     if not city_info:
         current_app.logger.warning(f"⚠️ No airport info found for {city}")
-        return jsonify({'message': f'No travel tips available for {city}. Showing general advice.'}), 200
+        return jsonify({
+            "message": f"No specific tips for {city}. Showing general advice.",
+            "tips": {
+                "packing": "Pack essentials and check the weather forecast.",
+                "visa": "Check visa requirements before traveling.",
+                "safety": "Stay aware of your surroundings.",
+                "etiquette": "Respect local customs and dress codes."
+            }
+        }), 200
 
     country = city_info.get('countryName', 'Unknown')
     current_app.logger.info(f"🌍 Generating tips for {city}, {country}")

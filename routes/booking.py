@@ -35,13 +35,18 @@ def book_flight():
     location = data.get('location')
     date = data.get('date')
 
+    current_app.logger.info(f"📥 Booking request: {data}")
+
     if not location or not date:
         return jsonify({'error': 'Missing destination or date'}), 400
 
     iata_code = get_iata_code(location)
     if not iata_code:
         current_app.logger.warning(f"⚠️ Could not resolve IATA for {location}")
-        return jsonify({'error': f'Invalid destination: {location}'}), 400
+        return jsonify({
+            "error": f"Invalid destination: {location}",
+            "hint": "Try using a major city or check spelling."
+        }), 400
 
     token = get_amadeus_token()
     if not token:
