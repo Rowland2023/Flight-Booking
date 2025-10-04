@@ -3,7 +3,7 @@ import logging
 
 bp = Blueprint('dashboard', __name__)
 
-@bp.route('/dashboard', methods=['GET'])
+@bp.route('/api/dashboard', methods=['GET'])
 def get_dashboard():
     location = request.args.get('location', 'Unknown').title()
     date = request.args.get('date', 'Unspecified')

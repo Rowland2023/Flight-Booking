@@ -13,7 +13,7 @@ amadeus = Client(
     client_secret=os.getenv('AMADEUS_SECRET')
 )
 
-@bp.route('/flight/status', methods=['GET'])
+@bp.route('/api/flight/status', methods=['GET'])
 def flight_status():
     carrier = request.args.get('carrier', '').upper()
     number = request.args.get('number', '').strip()
