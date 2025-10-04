@@ -13,7 +13,7 @@ def get_amadeus_token():
     res = requests.post(token_url, data=payload)
 
     if res.status_code != 200:
-        current_app.logger.error(f"❌ Amadeus token request failed: {res.text}")
+        current_app.logger.error(f"❌ Amadeus token request failed: {res.status_code} - {res.text}")
         return None
 
     return res.json().get('access_token')
@@ -27,6 +27,19 @@ def book_flight():
     if not location or not date:
         return jsonify({'error': 'Missing destination or date'}), 400
 
+    # Convert city name to IATA code
+    iata_lookup = {
+        "Paris": "CDG",
+        "London": "LHR",
+        "New York": "JFK",
+        "Abuja": "ABV",
+        "Lagos": "LOS"
+    }
+    iata_code = iata_lookup.get(location.title())
+    if not iata_code:
+        current_app.logger.warning(f"⚠️ Unknown destination: {location}")
+        return jsonify({'error': f'Unknown destination: {location}'}), 400
+
     token = get_amadeus_token()
     if not token:
         return jsonify({'error': 'Failed to retrieve Amadeus token'}), 502
@@ -35,7 +48,7 @@ def book_flight():
     search_url = 'https://test.api.amadeus.com/v2/shopping/flight-offers'
     params = {
         'originLocationCode': 'LOS',
-        'destinationLocationCode': location.upper(),
+        'destinationLocationCode': iata_code,
         'departureDate': date,
         'adults': 1,
         'nonStop': False,
@@ -44,15 +57,18 @@ def book_flight():
 
     res = requests.get(search_url, headers=headers, params=params)
     if res.status_code != 200:
-        current_app.logger.error(f"❌ Flight search failed: {res.text}")
+        current_app.logger.error(f"❌ Flight search failed: {res.status_code} - {res.text}")
         return jsonify({'error': 'Flight search failed'}), 500
 
     offers = res.json().get('data', [])
     if not offers:
-        return jsonify({'error': f'No flights found to {location} on {date}'}), 404
+        current_app.logger.warning(f"⚠️ No flights found to {location} on {date}")
+        return jsonify({'message': f'No flights available to {location} on {date}'}), 200
 
     first_offer = offers[0]
     itinerary = first_offer['itineraries'][0]['segments'][0]
+
+    current_app.logger.info(f"✅ Booking confirmed: {itinerary['carrierCode']}{itinerary['number']} from {itinerary['departure']['iataCode']} to {itinerary['arrival']['iataCode']}")
 
     return jsonify({
         'confirmation': 'Booking Confirmed',
