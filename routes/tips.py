@@ -16,6 +16,17 @@ def get_amadeus_token():
         return None
     return res.json().get('access_token')
 
+def get_city_info(city):
+    try:
+        res = requests.get(f"{request.host_url}api/airport?city={city}", timeout=5)
+        if res.status_code == 200:
+            airports = res.json().get('airports', [])
+            if airports:
+                return airports[0]  # Use first match
+    except Exception as e:
+        current_app.logger.error(f"❌ City info lookup failed for {city}: {e}")
+    return None
+
 @bp.route('/tips', methods=['GET'])
 def get_tips():
     city = request.args.get('city', '').title()
@@ -26,27 +37,26 @@ def get_tips():
     if not token:
         return jsonify({'error': 'Failed to retrieve Amadeus token'}), 502
 
-    headers = { 'Authorization': f'Bearer {token}' }
+    city_info = get_city_info(city)
+    if not city_info:
+        return jsonify({'error': f'No travel tips available for {city}'}), 404
 
-    # Placeholder: Amadeus does not have a travel tips endpoint
-    # Simulate tips based on city name
-    tips_db = {
-        "London": {
-            "packing": "Pack layers and a raincoat.",
-            "visa": "UK visa required for Nigerian passport holders.",
-            "safety": "Stay alert in crowded areas.",
-            "etiquette": "Queue patiently and avoid loud conversations."
-        },
-        "Lagos": {
-            "packing": "Light clothing and mosquito repellent.",
-            "visa": "No visa needed for Nigerian citizens.",
-            "safety": "Avoid isolated areas after dark.",
-            "etiquette": "Greet elders respectfully and be punctual."
-        }
+    country = city_info.get('countryName', 'Unknown')
+    current_app.logger.info(f"🌍 Generating tips for {city}, {country}")
+
+    # Dynamic tip generation
+    tips = {
+        "packing": "Pack essentials and check the weather forecast.",
+        "visa": f"Check visa requirements for travel to {country}.",
+        "safety": "Stay aware of your surroundings and follow local guidelines.",
+        "etiquette": f"Respect cultural norms in {country}, especially around dress and greetings."
     }
 
-    tips = tips_db.get(city)
-    if not tips:
-        return jsonify({'error': f'No travel tips available for {city}'}), 404
+    # Optional: Country-specific overrides
+    if country == "France":
+        tips["etiquette"] = "Greet with 'Bonjour', avoid loud conversations, and respect personal space."
+    elif country == "Nigeria":
+        tips["safety"] = "Avoid isolated areas after dark and stay hydrated."
+        tips["etiquette"] = "Greet elders respectfully and be mindful of local customs."
 
     return jsonify(tips)

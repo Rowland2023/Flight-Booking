@@ -18,6 +18,19 @@ def get_amadeus_token():
 
     return res.json().get('access_token')
 
+def get_iata_code(city):
+    try:
+        res = requests.get(f"{request.host_url}api/airport?city={city}", timeout=5)
+        if res.status_code == 200:
+            airports = res.json().get('airports', [])
+            if airports:
+                iata = airports[0].get('iataCode')
+                current_app.logger.info(f"🔄 Converted {city} → {iata}")
+                return iata
+    except Exception as e:
+        current_app.logger.error(f"❌ IATA lookup failed for {city}: {e}")
+    return None
+
 @bp.route('/book-flight', methods=['POST'])
 def book_flight():
     data = request.get_json()
@@ -27,18 +40,10 @@ def book_flight():
     if not location or not date:
         return jsonify({'error': 'Missing destination or date'}), 400
 
-    # Convert city name to IATA code
-    iata_lookup = {
-        "Paris": "CDG",
-        "London": "LHR",
-        "New York": "JFK",
-        "Abuja": "ABV",
-        "Lagos": "LOS"
-    }
-    iata_code = iata_lookup.get(location.title())
+    iata_code = get_iata_code(location)
     if not iata_code:
         current_app.logger.warning(f"⚠️ Unknown destination: {location}")
-        return jsonify({'error': f'Unknown destination: {location}'}), 400
+        return jsonify({'error': f'Could not resolve IATA code for {location}'}), 400
 
     token = get_amadeus_token()
     if not token:
