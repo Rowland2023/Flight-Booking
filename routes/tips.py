@@ -1,27 +1,50 @@
+import requests
 from flask import Blueprint, request, jsonify, current_app
-# ⬅️ IMPORT the core lookup function from the airport module
-from .airport import lookup_airport_data, get_amadeus_token
 
 bp = Blueprint('tips', __name__)
 
-@bp.route('/api/tips', methods=['GET'])
+def get_amadeus_token():
+    url = 'https://test.api.amadeus.com/v1/security/oauth2/token'
+    payload = {
+        'grant_type': 'client_credentials',
+        'client_id': current_app.config['AMADEUS_CLIENT_ID'],
+        'client_secret': current_app.config['AMADEUS_CLIENT_SECRET']
+    }
+    res = requests.post(url, data=payload)
+    if res.status_code != 200:
+        current_app.logger.error(f"❌ Amadeus token failed: {res.text}")
+        return None
+    return res.json().get('access_token')
+
+def get_city_info(city):
+    try:
+        res = requests.get(f"{request.host_url}api/airport?city={city}", timeout=5)
+        if res.status_code == 200:
+            airports = res.json().get('airports', [])
+            if airports:
+                return airports[0]
+    except Exception as e:
+        current_app.logger.error(f"❌ City info lookup failed for {city}: {e}")
+    return None
+
+@bp.route('/tips', methods=['GET'])
 def get_tips():
     city = request.args.get('city', '').title()
     if not city:
         return jsonify({'error': 'City parameter is required'}), 400
 
-    # ⬅️ INTERNAL CALL: Call the Python function directly
-    airport_data, status = lookup_airport_data(city)
+    token = get_amadeus_token()
+    if not token:
+        return jsonify({'error': 'Failed to retrieve Amadeus token'}), 502
 
-    # If airport lookup failed (e.g., 502, 404, 503), return that status directly
-    if status != 200 or not airport_data.get('airports'):
-        return jsonify(airport_data), status 
+    city_info = get_city_info(city)
+    if not city_info:
+        current_app.logger.warning(f"⚠️ No airport info found for {city}")
+        return jsonify({'message': f'No travel tips available for {city}. Showing general advice.'}), 200
 
-    city_info = airport_data['airports'][0] # Use the first match
-    country = city_info.get('country', 'Unknown')
+    country = city_info.get('countryName', 'Unknown')
     current_app.logger.info(f"🌍 Generating tips for {city}, {country}")
 
-    # Dynamic tip generation logic...
     tips = {
         "packing": "Pack essentials and check the weather forecast.",
         "visa": f"Check visa requirements for travel to {country}.",
@@ -29,7 +52,6 @@ def get_tips():
         "etiquette": f"Respect cultural norms in {country}, especially around dress and greetings."
     }
 
-    # Optional: Country-specific overrides
     if country == "France":
         tips["etiquette"] = "Greet with 'Bonjour', avoid loud conversations, and respect personal space."
     elif country == "Nigeria":
