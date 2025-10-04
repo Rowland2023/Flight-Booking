@@ -37,12 +37,15 @@ app.config['AMADEUS_CLIENT_SECRET'] = AMADEUS_CLIENT_SECRET
 # ✅ Import and register route blueprints
 from routes import weather, booking, airport, tips, status, flight
 
-app.register_blueprint(weather.bp, url_prefix='/api')
-app.register_blueprint(booking.bp, url_prefix='/api')
-app.register_blueprint(airport.bp, url_prefix='/api')
-app.register_blueprint(tips.bp, url_prefix='/api')
-app.register_blueprint(status.bp, url_prefix='/api')
-app.register_blueprint(flight.bp, url_prefix='/api')
+# Remove url_prefix='/api' from ALL registrations
+app.register_blueprint(weather.bp)
+app.register_blueprint(booking.bp)
+app.register_blueprint(airport.bp) # FIXED
+app.register_blueprint(tips.bp)    # FIXED
+app.register_blueprint(status.bp)
+app.register_blueprint(flight.bp)
+
+# /weather, /booking, /airport, /tips, etc.
 
 # ✅ Run the app
 if __name__ == '__main__':
