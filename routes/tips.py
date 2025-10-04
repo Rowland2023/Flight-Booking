@@ -1,44 +1,35 @@
-from flask import Blueprint, request, jsonify
-import logging
+import requests
+from flask import Blueprint, request, jsonify, current_app
 
 bp = Blueprint('tips', __name__)
 
-# Static travel tips data
-TIPS = {
-    "lagos": {
-        "packing": "🧳 Light clothes, mosquito repellent, power bank.",
-        "visa": "🛂 Visa required for most non-African countries.",
-        "safety": "🛡️ Avoid late-night travel, use trusted taxis.",
-        "etiquette": "🗣️ Greet elders respectfully, tipping is appreciated."
-    },
-    "london": {
-        "packing": "🧳 Umbrella, layered clothing, travel adapter.",
-        "visa": "🛂 Visa-free for many countries, check UK.gov.",
-        "safety": "🛡️ Very safe, watch for pickpockets in busy areas.",
-        "etiquette": "🗣️ Queue politely, avoid loud conversations."
-    },
-    "tokyo": {
-        "packing": "🧳 Comfortable shoes, cash, phrasebook.",
-        "visa": "🛂 Visa-free for many countries, check MOFA Japan.",
-        "safety": "🛡️ Extremely safe, follow local rules strictly.",
-        "etiquette": "🗣️ Bow when greeting, remove shoes indoors."
+def get_amadeus_token():
+    url = 'https://test.api.amadeus.com/v1/security/oauth2/token'
+    payload = {
+        'grant_type': 'client_credentials',
+        'client_id': current_app.config['AMADEUS_KEY'],
+        'client_secret': current_app.config['AMADEUS_SECRET']
     }
-}
+    res = requests.post(url, data=payload)
+    return res.json().get('access_token')
 
 @bp.route('/tips', methods=['GET'])
-def get_travel_tips():
-    city = request.args.get('city', '').strip().lower()
+def get_tips():
+    city = request.args.get('city')
+    token = get_amadeus_token()
+    headers = { 'Authorization': f'Bearer {token}' }
 
-    if not city:
-        logging.warning("Travel tips request missing 'city' parameter.")
-        return jsonify({"error": "City parameter is required"}), 400
+    # Replace with actual Amadeus endpoint once available
+    url = f'https://test.api.amadeus.com/v1/travel-recommendations?city={city}'
+    res = requests.get(url, headers=headers)
 
-    tips = TIPS.get(city, {
-        "packing": "🧳 Pack essentials based on weather.",
-        "visa": "🛂 Check your country's embassy website.",
-        "safety": "🛡️ Research local safety guidelines.",
-        "etiquette": "🗣️ Respect local customs and culture."
+    if res.status_code != 200:
+        return jsonify({'error': 'No tips available'}), 404
+
+    data = res.json()
+    return jsonify({
+        'packing': data.get('packingAdvice', 'No packing advice available.'),
+        'visa': data.get('visaInfo', 'Visa info unavailable.'),
+        'safety': data.get('safetyTips', 'No safety tips found.'),
+        'etiquette': data.get('etiquette', 'Etiquette info not available.')
     })
-
-    logging.info(f"Travel tips for '{city}': {tips}")
-    return jsonify(tips)

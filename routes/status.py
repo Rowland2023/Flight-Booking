@@ -1,48 +1,41 @@
 from flask import Blueprint, request, jsonify
+from amadeus import Client, ResponseError
 import logging
+import os
 
 bp = Blueprint('status', __name__)
 
-# Static flight status data
-STATUS = {
-    "NG101": {
-        "flight": "Air Nigeria 101",
-        "departure": "10:00 AM",
-        "arrival": "12:30 PM",
-        "gate": "A5",
-        "status": "On Time"
-    },
-    "BA202": {
-        "flight": "British Airways 202",
-        "departure": "2:00 PM",
-        "arrival": "6:45 PM",
-        "gate": "B12",
-        "status": "Delayed"
-    },
-    "JL303": {
-        "flight": "Japan Airlines 303",
-        "departure": "9:00 AM",
-        "arrival": "4:00 PM",
-        "gate": "C7",
-        "status": "Landed"
-    }
-}
+# Initialize Amadeus client securely
+amadeus = Client(
+    client_id=os.getenv('AMADEUS_KEY'),
+    client_secret=os.getenv('AMADEUS_SECRET')
+)
 
 @bp.route('/status', methods=['GET'])
 def get_flight_status():
     flight = request.args.get('flight', '').strip().upper()
 
-    if not flight:
-        logging.warning("Flight status request missing 'flight' parameter.")
-        return jsonify({"error": "Flight number is required"}), 400
+    if not flight or len(flight) < 3:
+        logging.warning("Flight status request missing or invalid 'flight' parameter.")
+        return jsonify({"error": "Valid flight number is required"}), 400
 
-    info = STATUS.get(flight, {
-        "flight": flight,
-        "departure": "Unknown",
-        "arrival": "Unknown",
-        "gate": "Unknown",
-        "status": "Not Found"
-    })
+    # Split flight into carrier and number (e.g. NG101 → NG + 101)
+    carrier = ''.join(filter(str.isalpha, flight))
+    number = ''.join(filter(str.isdigit, flight))
+    date = request.args.get('date', '2025-10-05')  # Default or passed date
 
-    logging.info(f"Flight status for {flight}: {info}")
-    return jsonify(info)
+    try:
+        response = amadeus.schedule.flights.get(
+            carrierCode=carrier,
+            flightNumber=number,
+            scheduledDepartureDate=date
+        )
+        logging.info(f"Live flight status for {flight} on {date}: {response.data}")
+        return jsonify({
+            "flight": flight,
+            "date": date,
+            "status": response.data
+        })
+    except ResponseError as error:
+        logging.error(f"Amadeus API error for {flight} on {date}: {error}")
+        return jsonify({"error": "Unable to retrieve live flight status"}), 502
