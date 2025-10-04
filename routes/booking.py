@@ -3,7 +3,7 @@ import logging
 
 bp = Blueprint('booking', __name__)
 
-@bp.route('/api/book-flight', methods=['POST'])
+@bp.route('/book-flight', methods=['POST'])
 def book_flight():
     try:
         data = request.get_json(force=True)

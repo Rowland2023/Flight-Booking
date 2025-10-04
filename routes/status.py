@@ -28,7 +28,7 @@ STATUS = {
     }
 }
 
-@bp.route('/api/status', methods=['GET'])
+@bp.route('/status', methods=['GET'])
 def get_flight_status():
     flight = request.args.get('flight', '').strip().upper()
 

@@ -25,7 +25,7 @@ TIPS = {
     }
 }
 
-@bp.route('/api/tips', methods=['GET'])
+@bp.route('/tips', methods=['GET'])
 def get_travel_tips():
     city = request.args.get('city', '').strip().lower()
 

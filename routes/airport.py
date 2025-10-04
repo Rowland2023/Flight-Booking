@@ -12,7 +12,7 @@ AIRPORTS = [
     {"city": "tokyo", "name": "Narita International Airport", "iata": "NRT", "country": "Japan"}
 ]
 
-@bp.route('/api/airport', methods=['GET'])
+@bp.route('/airport', methods=['GET'])
 def lookup_airport():
     city = request.args.get('city', '').strip().lower()
 

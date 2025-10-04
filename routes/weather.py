@@ -6,7 +6,7 @@ bp = Blueprint('weather', __name__)
 WEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY')
 WEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather'
 
-@bp.route('/api/weather', methods=['GET'])
+@bp.route('/weather', methods=['GET'])
 def get_weather():
     city = request.args.get('city', '').strip()
 
