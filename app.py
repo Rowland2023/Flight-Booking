@@ -4,19 +4,22 @@ import logging
 import os
 from dotenv import load_dotenv
 
-# ✅ Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-# ✅ Initialize Flask app
-app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+# Import route modules
+from routes import weather, booking, airport, tips, status, flight
 
-# ✅ Basic health check route
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
+
 @app.route('/')
 def home():
-    return '✅ Flight Booking API is running.'
+    return '✅ Flight Booking API is running. '
 
-# ✅ Logging setup
+
+# Logging setup
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
     filename='logs/flask.log',
@@ -24,30 +27,15 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)s: %(message)s'
 )
 
-# ✅ Securely access API keys from environment
-OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY')
-AMADEUS_CLIENT_ID = os.getenv('AMADEUS_CLIENT_ID')
-AMADEUS_CLIENT_SECRET = os.getenv('AMADEUS_CLIENT_SECRET')
+# Register Blueprints with /api prefix
+app.register_blueprint(weather.bp, url_prefix='/api')
+app.register_blueprint(booking.bp, url_prefix='/api')
+app.register_blueprint(airport.bp, url_prefix='/api')
+app.register_blueprint(tips.bp, url_prefix='/api')
+app.register_blueprint(status.bp, url_prefix='/api')
+app.register_blueprint(flight.bp, url_prefix='/api')
 
-# ✅ Make keys available to route modules if needed
-app.config['OPENWEATHER_API_KEY'] = OPENWEATHER_API_KEY
-app.config['AMADEUS_CLIENT_ID'] = AMADEUS_CLIENT_ID
-app.config['AMADEUS_CLIENT_SECRET'] = AMADEUS_CLIENT_SECRET
-
-# ✅ Import and register route blueprints
-from routes import weather, booking, airport, tips, status, flight
-
-# Remove url_prefix='/api' from ALL registrations
-app.register_blueprint(weather.bp)
-app.register_blueprint(booking.bp)
-app.register_blueprint(airport.bp) # FIXED
-app.register_blueprint(tips.bp)    # FIXED
-app.register_blueprint(status.bp)
-app.register_blueprint(flight.bp)
-
-# /weather, /booking, /airport, /tips, etc.
-
-# ✅ Run the app
+# Run the app
 if __name__ == '__main__':
     port = int(os.environ.get('FLASK_PORT', 5000))
     app.run(host='0.0.0.0', port=port)
